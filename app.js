@@ -26,19 +26,15 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT;
 const uriDb = process.env.DB_HOST;
 mongoose
-  .connect(uriDb, {
-    promiseLibrary: global.Promise,
-    useCreateIndex: true,
-    useUnifiedTopology: true,
-    useFindAndModify: false,
-  })
+  .connect(uriDb)
   .then(() => {
     console.log("Database connection successful");
-    app.listen(PORT, () => {
-      console.log(`Server is running. Use our API on port: ${PORT}`);
-    });
   })
   .catch((err) => {
     console.log(`Server not running. Error message: ${err.message}`);
     process.exit(1);
   });
+
+app.listen(PORT, () => {
+  console.log(`Server is running. Use our API on port: ${PORT}`);
+});
