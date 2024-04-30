@@ -1,12 +1,7 @@
 import contactsService from "../services/contactsServices.js";
 import HttpError from "../helpers/HttpError.js";
 import checkUniqueKeyValue from "../helpers/uniqueKeyError.js";
-
-const checkId = (id, next) => {
-  if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-    return next(HttpError(400, "Invalid id"));
-  }
-};
+import checkId from "../helpers/checkId.js";
 
 export const getAllContacts = async (req, res) => {
   try {
