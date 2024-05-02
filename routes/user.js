@@ -1,7 +1,11 @@
 import express from "express";
 import validateBody from "../helpers/validateBody.js";
-import { userRegisterSchema } from "../schemas/userSchema.js";
-import * as ctrl from "../controllers/userControllers.js";
+import {
+  userRegisterSchema,
+  subscriptionSchema,
+} from "../schemas/userSchema.js";
+import ctrl from "../controllers/userControllers.js";
+import auth from "../middleware/auth.js";
 
 const userRoter = express.Router();
 
@@ -10,5 +14,14 @@ userRoter.post(
   validateBody(userRegisterSchema),
   ctrl.userRegister
 );
-
+userRoter.post("/login", validateBody(userRegisterSchema), ctrl.userLogin);
 export default userRoter;
+
+userRoter.post("/logout", auth, ctrl.userLogout);
+userRoter.post("/current", auth, ctrl.currentUser);
+userRoter.patch(
+  "/",
+  auth,
+  validateBody(subscriptionSchema),
+  ctrl.updateSubscription
+);
