@@ -5,6 +5,7 @@ import HttpError from "../helpers/HttpError.js";
 import gravatar from "gravatar";
 import fs from "fs/promises";
 import path from "path";
+import Jimp from "jimp";
 
 const userRegister = async (req, res, next) => {
   try {
@@ -92,11 +93,18 @@ const uploadAvatars = async (req, res, next) => {
       req.file.filename
     );
     if (!req.user.avatarURL.includes("gravatar")) {
-      await fs.unlink(req.user.avatarURL);
+      await fs.unlink(path.join(process.cwd(), "public", req.user.avatarURL));
     }
-    console.log(req.user.avatarURL.includes("gravatar"));
 
     await fs.rename(req.file.path, avatarPath);
+
+    await Jimp.read(avatarPath)
+      .then((image) => {
+        return image.resize(250, 250).quality(90).write(avatarPath);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
@@ -117,6 +125,9 @@ const getAvatar = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
     if (user === null) return next(HttpError(404));
+    res
+      .status(200)
+      .sendFile(path.join(process.cwd(), "public", user.avatarURL));
   } catch (error) {
     next(HttpError(error));
   }
