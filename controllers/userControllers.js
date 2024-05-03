@@ -9,7 +9,9 @@ const userRegister = async (req, res, next) => {
     const normEmail = email.toLowerCase();
 
     const user = await User.findOne({ email: normEmail });
-    if (user !== null) next(HttpError(409, "Email in use"));
+    if (user !== null) {
+      return next(HttpError(409, "Email in use"));
+    }
 
     const paswwordHashed = bcrypt.hashSync(password, 10);
     const addedUser = await User.create({

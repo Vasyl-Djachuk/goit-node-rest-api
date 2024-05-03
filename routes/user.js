@@ -18,7 +18,7 @@ userRoter.post("/login", validateBody(userRegisterSchema), ctrl.userLogin);
 export default userRoter;
 
 userRoter.post("/logout", auth, ctrl.userLogout);
-userRoter.post("/current", auth, ctrl.currentUser);
+userRoter.get("/current", auth, ctrl.currentUser);
 userRoter.patch(
   "/",
   auth,
