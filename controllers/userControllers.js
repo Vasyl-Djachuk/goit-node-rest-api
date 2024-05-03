@@ -2,6 +2,9 @@ import User from "../model/user.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import HttpError from "../helpers/HttpError.js";
+import gravatar from "gravatar";
+import fs from "fs/promises";
+import path from "path";
 
 const userRegister = async (req, res, next) => {
   try {
@@ -12,11 +15,12 @@ const userRegister = async (req, res, next) => {
     if (user !== null) {
       return next(HttpError(409, "Email in use"));
     }
-
+    const avatarURL = gravatar.url(normEmail);
     const paswwordHashed = bcrypt.hashSync(password, 10);
     const addedUser = await User.create({
       password: paswwordHashed,
       email: normEmail,
+      avatarURL,
     });
     res.status(201).send({
       user: { email: addedUser.email, subscription: addedUser.subscription },
@@ -79,10 +83,50 @@ const updateSubscription = async (req, res, next) => {
     next(error);
   }
 };
+
+const uploadAvatars = async (req, res, next) => {
+  try {
+    const avatarPath = path.join(
+      process.cwd(),
+      "public/avatars",
+      req.file.filename
+    );
+    if (!req.user.avatarURL.includes("gravatar")) {
+      await fs.unlink(req.user.avatarURL);
+    }
+    console.log(req.user.avatarURL.includes("gravatar"));
+
+    await fs.rename(req.file.path, avatarPath);
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        avatarURL: `/avatars/${req.file.filename}`,
+      },
+      { new: true }
+    );
+    if (user === null) return next(HttpError(404));
+
+    res.status(200).json({ avatarURL: user.avatarURL });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAvatar = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (user === null) return next(HttpError(404));
+  } catch (error) {
+    next(HttpError(error));
+  }
+};
 export default {
   userLogout,
   userLogin,
   userRegister,
   currentUser,
   updateSubscription,
+  uploadAvatars,
+  getAvatar,
 };
