@@ -32,14 +32,16 @@ const userLogin = async (req, res, next) => {
     const normEmail = email.toLowerCase();
 
     const user = await User.findOne({ email: normEmail });
-    if (user === null) next(HttpError(401, "Email or password is wrong"));
+    if (user === null)
+      return next(HttpError(401, "Email or password is wrong"));
 
     const isMatch = bcrypt.compareSync(password, user.password);
 
-    if (isMatch === false) next(HttpError(401, "Email or password is wrong"));
+    if (isMatch === false)
+      return next(HttpError(401, "Email or password is wrong"));
 
     const token = jwt.sign({ id: user._id }, process.env.SECRET_REY, {
-      expiresIn: "10h",
+      expiresIn: "1d",
     });
 
     await User.findByIdAndUpdate(user._id, { token });

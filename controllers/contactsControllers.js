@@ -29,10 +29,10 @@ const getOneContact = async (req, res, next) => {
     const { id } = req.params;
     checkId(id, next);
     const contact = await Contacts.findOne({ _id: id });
-    if (contact.owner.toString() !== req.user.id) {
+    if (!contact || contact.owner?.toString() !== req.user.id) {
       return next(HttpError(404));
     }
-    contact ? res.status(200).json(contact) : next(HttpError(404));
+    res.status(200).json(contact);
   } catch (err) {
     next(err);
   }
