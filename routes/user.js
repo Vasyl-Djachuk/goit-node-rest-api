@@ -6,6 +6,7 @@ import {
 } from "../schemas/userSchema.js";
 import ctrl from "../controllers/userControllers.js";
 import auth from "../middleware/auth.js";
+import upload from "../middleware/upload.js";
 
 const userRoter = express.Router();
 
@@ -25,3 +26,5 @@ userRoter.patch(
   validateBody(subscriptionSchema),
   ctrl.updateSubscription
 );
+userRoter.patch("/avatars", auth, upload.single("avatar"), ctrl.uploadAvatars);
+userRoter.get("/avatars", auth, ctrl.getAvatar);

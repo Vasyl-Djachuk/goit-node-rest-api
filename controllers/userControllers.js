@@ -2,6 +2,10 @@ import User from "../model/user.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import HttpError from "../helpers/HttpError.js";
+import gravatar from "gravatar";
+import fs from "fs/promises";
+import path from "path";
+import Jimp from "jimp";
 
 const userRegister = async (req, res, next) => {
   try {
@@ -12,11 +16,12 @@ const userRegister = async (req, res, next) => {
     if (user !== null) {
       return next(HttpError(409, "Email in use"));
     }
-
+    const avatarURL = gravatar.url(normEmail);
     const paswwordHashed = bcrypt.hashSync(password, 10);
     const addedUser = await User.create({
       password: paswwordHashed,
       email: normEmail,
+      avatarURL,
     });
     res.status(201).send({
       user: { email: addedUser.email, subscription: addedUser.subscription },
@@ -79,10 +84,60 @@ const updateSubscription = async (req, res, next) => {
     next(error);
   }
 };
+
+const uploadAvatars = async (req, res, next) => {
+  try {
+    const avatarPath = path.join(
+      process.cwd(),
+      "public/avatars",
+      req.file.filename
+    );
+    if (!req.user.avatarURL.includes("gravatar")) {
+      await fs.unlink(path.join(process.cwd(), "public", req.user.avatarURL));
+    }
+
+    await fs.rename(req.file.path, avatarPath);
+
+    await Jimp.read(avatarPath)
+      .then((image) => {
+        return image.resize(250, 250).quality(90).write(avatarPath);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        avatarURL: `/avatars/${req.file.filename}`,
+      },
+      { new: true }
+    );
+    if (user === null) return next(HttpError(404));
+
+    res.status(200).json({ avatarURL: user.avatarURL });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAvatar = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (user === null) return next(HttpError(404));
+    res
+      .status(200)
+      .sendFile(path.join(process.cwd(), "public", user.avatarURL));
+  } catch (error) {
+    next(HttpError(error));
+  }
+};
 export default {
   userLogout,
   userLogin,
   userRegister,
   currentUser,
   updateSubscription,
+  uploadAvatars,
+  getAvatar,
 };
