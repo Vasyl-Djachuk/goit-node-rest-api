@@ -3,6 +3,7 @@ import validateBody from "../helpers/validateBody.js";
 import {
   userRegisterSchema,
   subscriptionSchema,
+  emailSchema,
 } from "../schemas/userSchema.js";
 import ctrl from "../controllers/userControllers.js";
 import auth from "../middleware/auth.js";
@@ -25,3 +26,5 @@ userRoter.patch(
   validateBody(subscriptionSchema),
   ctrl.updateSubscription
 );
+userRoter.get("/verify/:verificationToken", ctrl.userVerificationEmail);
+userRoter.post("/verify", validateBody(emailSchema), ctrl.resendingEmail);

@@ -2,6 +2,11 @@ import User from "../model/user.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import HttpError from "../helpers/HttpError.js";
+import sgMail from "@sendgrid/mail";
+
+import crypto from "node:crypto";
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const userRegister = async (req, res, next) => {
   try {
@@ -14,9 +19,23 @@ const userRegister = async (req, res, next) => {
     }
 
     const paswwordHashed = bcrypt.hashSync(password, 10);
+
+    const verificationToken = crypto.randomUUID();
+    const message = {
+      to: email,
+      from: process.env.SENDGRID_FROM_EMAIL,
+      subject: "Confirm you registration",
+      html: `To confirm you registration please click on the <a href="http://localhost:${process.env.PORT}/api/users/verify/${verificationToken}"  target="_blank">link</a> `,
+    };
+    sgMail
+      .send(message)
+      .then()
+      .catch((err) => console.log(err));
+
     const addedUser = await User.create({
       password: paswwordHashed,
       email: normEmail,
+      verificationToken,
     });
     res.status(201).send({
       user: { email: addedUser.email, subscription: addedUser.subscription },
@@ -39,6 +58,9 @@ const userLogin = async (req, res, next) => {
 
     if (isMatch === false)
       return next(HttpError(401, "Email or password is wrong"));
+    if (user.verify === false) {
+      return next(HttpError(401, "Your account is not verified"));
+    }
 
     const token = jwt.sign({ id: user._id }, process.env.SECRET_REY, {
       expiresIn: "1d",
@@ -79,10 +101,53 @@ const updateSubscription = async (req, res, next) => {
     next(error);
   }
 };
+
+const userVerificationEmail = async (req, res, next) => {
+  try {
+    const { verificationToken } = req.params;
+
+    const user = await User.findOne({ verificationToken });
+    if (user === null) return next(HttpError(404, "User not found"));
+
+    await User.findByIdAndUpdate(user._id, {
+      verify: true,
+      verificationToken: null,
+    });
+
+    res.status(200).json({ message: "Verification successful" });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const resendingEmail = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (user === null) return next(HttpError(404));
+    if (user.verify)
+      return next(HttpError(400, "Verification has already been passed"));
+
+    const message = {
+      to: email,
+      from: process.env.SENDGRID_FROM_EMAIL,
+      subject: "Confirm you registration",
+      html: `To confirm you registration please click on the <a href="http://localhost:${process.env.PORT}/api/users/verify/${user.verificationToken}"   target="_blank">link</a> `,
+    };
+    await sgMail.send(message);
+
+    res.status(200).json({ message: "Verification email sent" });
+  } catch (error) {
+    console.log(error);
+  }
+};
 export default {
   userLogout,
   userLogin,
   userRegister,
   currentUser,
   updateSubscription,
+  userVerificationEmail,
+  resendingEmail,
 };
